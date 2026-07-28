@@ -1,0 +1,89 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- สร้างหน้าต่าง UI
+local Window = Rayfield:CreateWindow({
+   Name = "Player ESP System",
+   LoadingTitle = "กำลังโหลดระบบ...",
+   LoadingSubtitle = "by Player",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   KeySystem = false
+})
+
+local MainTab = Window:CreateTab("หน้าหลัก", 4483362458)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local espEnabled = false
+
+-- ฟังก์ชันใส่แสง Highlight ให้ผู้เล่น
+local function addESP(player)
+    if player ~= LocalPlayer then
+        local function apply()
+            local character = player.Character or player.CharacterAdded:Wait()
+            if character and not character:FindFirstChild("ESPHighlight") then
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "ESPHighlight"
+                highlight.FillColor = Color3.fromRGB(255, 0, 0) -- สีข้างใน (สีแดง)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- สีเส้นขอบ (สีขาว)
+                highlight.FillTransparency = 0.5 -- ความโปร่งใสข้างใน
+                highlight.OutlineTransparency = 0
+                highlight.Adornee = character
+                highlight.Parent = character
+            end
+        end
+        
+        apply()
+        -- ถ้าผู้เล่นตายแล้วเกิดใหม่ ให้ใส่ Highlight กลับมาด้วย
+        player.CharacterAdded:Connect(function()
+            if espEnabled then
+                task.wait(0.5)
+                apply()
+            end
+        end)
+    end
+end
+
+-- ฟังก์ชันลบแสง Highlight
+local function removeESP(player)
+    if player.Character and player.Character:FindFirstChild("ESPHighlight") then
+        player.Character.ESPHighlight:Destroy()
+    end
+end
+
+-- สร้างปุ่ม Toggle เปิด-ปิด
+MainTab:CreateToggle({
+   Name = "เปิด/ปิด มองเห็นผู้เล่นทะลุกำแพง (ESP)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+        espEnabled = Value
+        
+        if espEnabled then
+            -- เปิดใช้งาน: ใส่ Highlight ให้ทุกคน
+            for _, player in ipairs(Players:GetPlayers()) do
+                addESP(player)
+            end
+        else
+            -- ปิดใช้งาน: ลบ Highlight ของทุกคน
+            for _, player in ipairs(Players:GetPlayers()) do
+                removeESP(player)
+            end
+        end
+   end,
+})
+
+-- ดักจับกรณีมีผู้เล่นใหม่เข้ามาในเซิร์ฟเวอร์ขณะเปิดสคริปต์อยู่
+Players.PlayerAdded:Connect(function(player)
+    if espEnabled then
+        addESP(player)
+    end
+end)
+
+Rayfield:Notify({
+   Title = "สำเร็จ!",
+   Content = "โหลดระบบ ESP เรียบร้อย",
+   Duration = 3,
+   Image = 4483362458,
+})
