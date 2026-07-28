@@ -1,0 +1,41 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Q1 Hub",
+   LoadingTitle = "Loading System...",
+   LoadingSubtitle = "by q1",
+   ConfigurationSaving = {
+      Enabled = false,
+      FolderName = nil,
+      FileName = "Q1Hub"
+   },
+   Discord = {
+      Enabled = false,
+      Invite = "noinvitelink",
+      RememberJoins = true
+   },
+   KeySystem = false
+})
+
+local Tab = Window:CreateTab("Main Menu", 4483362458) 
+
+local _G.AutoSpawn = false
+local spawnEvent = game:GetService("ReplicatedStorage"):WaitForChild("SpawnLuckyBlock")
+
+Tab:CreateToggle({
+   Name = "Auto Spawn Lucky Block",
+   CurrentValue = false,
+   Flag = "AutoSpawnToggle", 
+   Callback = function(Value)
+       _G.AutoSpawn = Value
+       
+       if _G.AutoSpawn then
+           task.spawn(function()
+               while _G.AutoSpawn do
+                   task.wait(0.1) -- 0.1 second delay to prevent lag
+                   spawnEvent:FireServer()
+               end
+           end)
+       end
+   end,
+})
