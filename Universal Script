@@ -1,0 +1,287 @@
+-- โหลด Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Universal All-In-One Script",
+   LoadingTitle = "กำลังโหลดสคริปต์...",
+   LoadingSubtitle = "ใช้งานได้กับทุกแมพ (Universal)",
+   ConfigurationSaving = { Enabled = false },
+   KeySystem = false
+})
+
+-- สร้าง Tabs
+local MainTab = Window:CreateTab("การเคลื่อนที่", 4483362458)
+local VisualsTab = Window:CreateTab("การมองเห็น & วาร์ป", 4483362458)
+local WorldTab = Window:CreateTab("ระบบแมพ & เซิร์ฟเวอร์", 4483362458)
+
+-- Services & Local Variables
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+
+-- States
+local speedValue = 16
+local jumpValue = 50
+local infJumpEnabled = false
+local noclipEnabled = false
+local flying = false
+local flySpeed = 50
+local espEnabled = false
+local fullbrightEnabled = false
+local defaultBrightness = Lighting.Brightness
+local defaultClockTime = Lighting.ClockTime
+
+---------------------------------------------------------
+-- TAB 1: การเคลื่อนที่ (MOVEMENT)
+---------------------------------------------------------
+
+-- 1. บิน (Fly System)
+local bodyVelocity, bodyGyro, flyConnection
+
+local function startFlying()
+   local char = LocalPlayer.Character
+   if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+   
+   local root = char.HumanoidRootPart
+   bodyGyro = Instance.new("BodyGyro")
+   bodyGyro.P = 9e4
+   bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+   bodyGyro.CFrame = root.CFrame
+   bodyGyro.Parent = root
+   
+   bodyVelocity = Instance.new("BodyVelocity")
+   bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+   bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+   bodyVelocity.Parent = root
+   
+   local camera = workspace.CurrentCamera
+
+   flyConnection = RunService.RenderStepped:Connect(function()
+      if not flying or not char or not char:FindFirstChild("HumanoidRootPart") then return end
+      bodyGyro.CFrame = camera.CFrame
+      
+      local moveDir = Vector3.new(0, 0, 0)
+      if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+      if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+      if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+      if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+      if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+      if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+      bodyVelocity.Velocity = moveDir * flySpeed
+   end)
+end
+
+local function stopFlying()
+   if flyConnection then flyConnection:Disconnect() end
+   if bodyVelocity then bodyVelocity:Destroy() end
+   if bodyGyro then bodyGyro:Destroy() end
+end
+
+MainTab:CreateToggle({
+   Name = "1. เปิด-ปิด ระบบบิน (Fly)",
+   CurrentValue = false,
+   Flag = "FlyToggle",
+   Callback = function(Value)
+      flying = Value
+      if flying then startFlying() else stopFlying() end
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "2. ความเร็วในการบิน",
+   Range = {10, 300},
+   Increment = 5,
+   Suffix = " Speed",
+   CurrentValue = 50,
+   Flag = "FlySpeedSlider",
+   Callback = function(Value) flySpeed = Value end,
+})
+
+-- 2. วิ่งไว & กระโดดสูง
+MainTab:CreateSlider({
+   Name = "3. ปรับความเร็ววิ่ง (WalkSpeed)",
+   Range = {16, 250},
+   Increment = 1,
+   Suffix = " Speed",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+      speedValue = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+         LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
+      end
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "4. ปรับแรงกระโดด (JumpPower)",
+   Range = {50, 350},
+   Increment = 5,
+   Suffix = " Power",
+   CurrentValue = 50,
+   Flag = "JumpSlider",
+   Callback = function(Value)
+      jumpValue = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+         hum.UseJumpPower = true
+         hum.JumpPower = jumpValue
+      end
+   end,
+})
+
+-- 3. กระโดดกลางอากาศ & เดินทะลุกำแพง
+MainTab:CreateToggle({
+   Name = "5. กระโดดเหยียบอากาศ (Infinite Jump)",
+   CurrentValue = false,
+   Flag = "InfJumpToggle",
+   Callback = function(Value) infJumpEnabled = Value end,
+})
+
+UserInputService.JumpRequest:Connect(function()
+   if infJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+      LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+   end
+end)
+
+MainTab:CreateToggle({
+   Name = "6. เดินทะลุกำแพง (Noclip)",
+   CurrentValue = false,
+   Flag = "NoclipToggle",
+   Callback = function(Value) noclipEnabled = Value end,
+})
+
+RunService.Stepped:Connect(function()
+   if noclipEnabled and LocalPlayer.Character then
+      for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+         if part:IsA("BasePart") and part.CanCollide then
+            part.CanCollide = false
+         end
+      end
+   end
+end)
+
+---------------------------------------------------------
+-- TAB 2: การมองเห็น & วาร์ป (VISUALS & TELEPORT)
+---------------------------------------------------------
+
+-- 4. มองทะลุกำแพง (ESP)
+VisualsTab:CreateToggle({
+   Name = "7. มองเห็นผู้เล่นทะลุกำแพง (Player ESP)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+      espEnabled = Value
+      if espEnabled then
+         for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and not player.Character:FindFirstChild("ESPHighlight") then
+               local highlight = Instance.new("Highlight")
+               highlight.Name = "ESPHighlight"
+               highlight.FillColor = Color3.fromRGB(255, 50, 50)
+               highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+               highlight.Parent = player.Character
+            end
+         end
+      else
+         for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("ESPHighlight") then
+               player.Character.ESPHighlight:Destroy()
+            end
+         end
+      end
+   end,
+})
+
+-- 5. ระบบวาร์ปไปหาผู้เล่น
+local selectedPlayer = nil
+local function updatePlayerList()
+   local list = {}
+   for _, p in pairs(Players:GetPlayers()) do
+      if p ~= LocalPlayer then table.insert(list, p.Name) end
+   end
+   return list
+end
+
+local PlayerDropdown = VisualsTab:CreateDropdown({
+   Name = "8. เลือกชื่อผู้เล่นที่จะวาร์ปไปหา",
+   Options = updatePlayerList(),
+   CurrentOption = "",
+   Flag = "PlayerTPDropdown",
+   Callback = function(Option)
+      if type(Option) == "table" then selectedPlayer = Option[1] else selectedPlayer = Option end
+   end,
+})
+
+VisualsTab:CreateButton({
+   Name = "9. กดวาร์ปไปหาผู้เล่นทันที",
+   Callback = function()
+      if selectedPlayer then
+         local target = Players:FindFirstChild(selectedPlayer)
+         if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+               LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -3)
+            end
+         end
+      end
+   end,
+})
+
+VisualsTab:CreateButton({
+   Name = "   └─ รีเฟรชรายชื่อคนในเซิร์ฟ",
+   Callback = function()
+      PlayerDropdown:Refresh(updatePlayerList())
+   end,
+})
+
+---------------------------------------------------------
+-- TAB 3: ระบบแมพ & เซิร์ฟเวอร์ (WORLD & UTILITIES)
+---------------------------------------------------------
+
+-- 6. ปรับฉากสว่าง 100%
+WorldTab:CreateToggle({
+   Name = "10. ปิดความมืด / ฉากสว่าง 100% (Fullbright)",
+   CurrentValue = false,
+   Flag = "FullbrightToggle",
+   Callback = function(Value)
+      fullbrightEnabled = Value
+      if fullbrightEnabled then
+         Lighting.Brightness = 2
+         Lighting.ClockTime = 14
+         Lighting.FogEnd = 100000
+         Lighting.GlobalShadows = false
+      else
+         Lighting.Brightness = defaultBrightness
+         Lighting.ClockTime = defaultClockTime
+         Lighting.GlobalShadows = true
+      end
+   end,
+})
+
+-- 7. ปุ่มย้ายเข้าเซิร์ฟใหม่ (Rejoin Server)
+WorldTab:CreateButton({
+   Name = "ย้ายเข้าเซิร์ฟเวอร์เดิมใหม่ (Rejoin)",
+   Callback = function()
+      TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+   end,
+})
+
+-- 8. ปุ่มย้ายไปเซิร์ฟอื่น (Server Hop)
+WorldTab:CreateButton({
+   Name = "สุ่มย้ายไปเซิร์ฟเวอร์อื่น (Server Hop)",
+   Callback = function()
+      TeleportService:Teleport(game.PlaceId, LocalPlayer)
+   end,
+})
+
+-- Auto-rebind บนตัวละครเกิดใหม่
+LocalPlayer.CharacterAdded:Connect(function(char)
+   task.wait(0.5)
+   local hum = char:WaitForChild("Humanoid")
+   hum.WalkSpeed = speedValue
+   hum.UseJumpPower = true
+   hum.JumpPower = jumpValue
+end)
