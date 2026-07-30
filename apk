@@ -1,0 +1,159 @@
+-- สร้าง ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.Name = "CustomMenuUI"
+
+-- ==========================================
+-- 1. สร้างปุ่มเปิด/ปิด ( Toggle Button 'G' )
+-- ==========================================
+local ToggleBtn = Instance.new("TextButton")
+local ToggleCorner = Instance.new("UICorner")
+
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.Name = "ToggleButton"
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.4, 0) -- ตำแหน่งเริ่มต้นข้างซ้ายจอ
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 0) -- สีเขียว
+ToggleBtn.Text = "G"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 28
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true -- สามารถลากปุ่ม G ไปวางที่อื่นบนจอได้
+
+ToggleCorner.CornerRadius = UDim.new(1, 0) -- ปรับเป็นวงกลมมนสมบูรณ์
+ToggleCorner.Parent = ToggleBtn
+
+-- ==========================================
+-- 2. สร้าง Frame หน้าต่างหลัก
+-- ==========================================
+local MainFrame = Instance.new("Frame")
+local MainCorner = Instance.new("UICorner")
+
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 260, 0, 330)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Visible = true -- สถานะเริ่มต้น: แสดงหน้าต่าง
+
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+-- ระบบกดปุ่ม G เพื่อ สลับแสดง/ซ่อน หน้าต่างหลัก
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- ช่องพิมพ์ใส่โค้ด (TextBox)
+local CodeInput = Instance.new("TextBox")
+local InputCorner = Instance.new("UICorner")
+
+CodeInput.Parent = MainFrame
+CodeInput.Size = UDim2.new(0.9, 0, 0, 50)
+CodeInput.Position = UDim2.new(0.05, 0, 0, 10)
+CodeInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+CodeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+CodeInput.PlaceholderText = "วางโค้ดที่นี่..."
+CodeInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+CodeInput.Text = ""
+CodeInput.TextSize = 13
+CodeInput.Font = Enum.Font.SourceSansBold
+CodeInput.ClearTextOnFocus = false
+CodeInput.MultiLine = true
+CodeInput.TextWrapped = true
+
+InputCorner.CornerRadius = UDim.new(0, 6)
+InputCorner.Parent = CodeInput
+
+-- ตัวแปรสำหรับเก็บสถานะ
+local isAutoRun = false
+local savedCodes = {}
+
+-- ฟังก์ชันสร้างปุ่มเมนู
+local function CreateButton(text, color, positionY, callback)
+    local btn = Instance.new("TextButton")
+    local btnCorner = Instance.new("UICorner")
+    
+    btn.Parent = MainFrame
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = UDim2.new(0.05, 0, 0, positionY)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 16
+    btn.Font = Enum.Font.SourceSansBold
+    
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        callback(btn)
+    end)
+    return btn
+end
+
+-- ฟังก์ชันรันโค้ด
+local function ExecuteCode()
+    local rawText = CodeInput.Text
+    if not rawText or rawText == "" then
+        warn("กรุณากรอกโค้ดก่อนกดรัน!")
+        return
+    end
+
+    local func, err = loadstring(rawText)
+    if func then
+        local success, runErr = pcall(func)
+        if not success then
+            warn("เกิดข้อผิดพลาดขณะรันโค้ด: " .. tostring(runErr))
+        end
+    else
+        warn("รูปแบบโค้ดไม่ถูกต้อง: " .. tostring(err))
+    end
+end
+
+-- 1. ปุ่มคัดลอกโค้ด
+CreateButton("1. คัดลอกโค้ด", Color3.fromRGB(0, 102, 255), 70, function()
+    if CodeInput.Text ~= "" then
+        setclipboard(CodeInput.Text)
+        print("คัดลอกโค้ดเรียบร้อย!")
+    end
+end)
+
+-- 2. ปุ่มรันโค้ด 1 ครั้ง
+CreateButton("2. รันโค้ด 1 ครั้ง", Color3.fromRGB(0, 153, 0), 120, function()
+    ExecuteCode()
+end)
+
+-- 3. ปุ่มบันทึกโค้ด
+CreateButton("3. บันทึกโค้ด", Color3.fromRGB(70, 70, 70), 170, function()
+    if CodeInput.Text ~= "" then
+        table.insert(savedCodes, CodeInput.Text)
+        print("บันทึกโค้ดเรียบร้อยแล้ว")
+    end
+end)
+
+-- 4. ปุ่มประวัติบันทึก
+CreateButton("4. ประวัติบันทึก", Color3.fromRGB(128, 0, 128), 220, function()
+    print("--- ประวัติโค้ดที่บันทึกไว้ ---")
+    for i, v in ipairs(savedCodes) do
+        print("[" .. i .. "] " .. v)
+    end
+end)
+
+-- 5. ปุ่มรันรัวๆ: ON/OFF
+CreateButton("5. รันรัวๆ: OFF", Color3.fromRGB(204, 0, 0), 270, function(btn)
+    isAutoRun = not isAutoRun
+    if isAutoRun then
+        btn.Text = "5. รันรัวๆ: ON"
+        task.spawn(function()
+            while isAutoRun do
+                ExecuteCode()
+                task.wait(0.1)
+            end
+        end)
+    else
+        btn.Text = "5. รันรัวๆ: OFF"
+    end
+end)
