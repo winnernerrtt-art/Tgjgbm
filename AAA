@@ -1,0 +1,176 @@
+-- สร้าง ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local UICorner = Instance.new("UICorner")
+local CodeBox = Instance.new("TextBox")
+local BoxCorner = Instance.new("UICorner")
+local ProfileImg = Instance.new("ImageLabel")
+local ImgCorner = Instance.new("UICorner")
+local UIListLayout = Instance.new("UIListLayout")
+local ButtonContainer = Instance.new("Frame")
+
+ScreenGui.Name = "CustomExecutorUI"
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- กรอบหลัก
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.3, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 320, 0, 420)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+-- ช่องใส่โค้ด
+CodeBox.Name = "CodeBox"
+CodeBox.Parent = MainFrame
+CodeBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+CodeBox.Position = UDim2.new(0.22, 0, 0.04, 0)
+CodeBox.Size = UDim2.new(0, 235, 0, 50)
+CodeBox.Font = Enum.Font.SourceSans
+CodeBox.PlaceholderText = "วางโค้ดที่นี่..."
+CodeBox.Text = ""
+CodeBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+CodeBox.TextSize = 18.000
+CodeBox.TextXAlignment = Enum.TextXAlignment.Left
+CodeBox.ClearTextOnFocus = false
+
+BoxCorner.CornerRadius = UDim.new(0, 8)
+BoxCorner.Parent = CodeBox
+
+-- ไอคอนโปรไฟล์ (รูปนินจา)
+ProfileImg.Name = "ProfileImg"
+ProfileImg.Parent = MainFrame
+ProfileImg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ProfileImg.Position = UDim2.new(0.04, 0, 0.04, 0)
+ProfileImg.Size = UDim2.new(0, 50, 0, 50)
+ProfileImg.Image = "rbxassetid://10850239276"
+
+ImgCorner.CornerRadius = UDim.new(0, 10)
+ImgCorner.Parent = ProfileImg
+
+-- ตัวจัดเรียงปุ่ม
+ButtonContainer.Name = "ButtonContainer"
+ButtonContainer.Parent = MainFrame
+ButtonContainer.BackgroundTransparency = 1
+ButtonContainer.Position = UDim2.new(0.04, 0, 0.2, 0)
+ButtonContainer.Size = UDim2.new(0, 294, 0, 320)
+
+UIListLayout.Parent = ButtonContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10)
+
+-- ฟังก์ชันสร้างปุ่ม
+local function createButton(text, color, order)
+    local btn = Instance.new("TextButton")
+    local btnCorner = Instance.new("UICorner")
+    
+    btn.Name = "Btn_" .. tostring(order)
+    btn.Parent = ButtonContainer
+    btn.BackgroundColor3 = color
+    btn.Size = UDim2.new(1, 0, 0, 50)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 20.000
+    btn.LayoutOrder = order
+    
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    return btn
+end
+
+-- สร้างปุ่มตามรายการ
+local btn1 = createButton("1. คัดลอกโค้ด", Color3.fromRGB(0, 102, 255), 1)
+local btn2 = createButton("2. รันโค้ด 1 ครั้ง", Color3.fromRGB(0, 170, 0), 2)
+local btn3 = createButton("3. บันทึกโค้ด", Color3.fromRGB(70, 70, 70), 3)
+local btn4 = createButton("4. ประวัติบันทึก", Color3.fromRGB(130, 50, 200), 4)
+local btn5 = createButton("5. รันรัวๆ (0.01s): OFF", Color3.fromRGB(180, 0, 0), 5)
+
+-- ระบบการทำงานของปุ่ม
+local savedCode = ""
+local autoRun = false
+
+btn1.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(CodeBox.Text)
+    end
+end)
+
+btn2.MouseButton1Click:Connect(function()
+    if CodeBox.Text ~= "" then
+        pcall(function()
+            loadstring(CodeBox.Text)()
+        end)
+    end
+end)
+
+btn3.MouseButton1Click:Connect(function()
+    savedCode = CodeBox.Text
+end)
+
+btn4.MouseButton1Click:Connect(function()
+    if savedCode ~= "" then
+        CodeBox.Text = savedCode
+    end
+end)
+
+btn5.MouseButton1Click:Connect(function()
+    autoRun = not autoRun
+    if autoRun then
+        btn5.Text = "5. รันรัวๆ (0.01s): ON"
+        btn5.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    else
+        btn5.Text = "5. รันรัวๆ (0.01s): OFF"
+        btn5.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    end
+end)
+
+-- ลูปการทำงานแบบเร่งสปีดเป็น 0.01 วินาที
+task.spawn(function()
+    while true do
+        task.wait(0.01) -- ปรับดีเลย์เป็น 0.01 วินาที
+        if autoRun and CodeBox.Text ~= "" then
+            pcall(function()
+                loadstring(CodeBox.Text)()
+            end)
+        end
+    end
+end)
+
+----------------------------------------------------
+-- ส่วนของไอคอนเปิด/ปิด UI (Toggle Icon ZA)
+----------------------------------------------------
+local ToggleBtn = Instance.new("TextButton")
+local ToggleCorner = Instance.new("UICorner")
+
+ToggleBtn.Name = "ZAToggleBtn"
+ToggleBtn.Parent = ScreenGui
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(76, 153, 0)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
+ToggleBtn.Size = UDim2.new(0, 55, 0, 55)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "ZA"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 28
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+ToggleCorner.CornerRadius = UDim.new(0, 12)
+ToggleCorner.Parent = ToggleBtn
+
+local isUiOpen = true
+ToggleBtn.MouseButton1Click:Connect(function()
+    isUiOpen = not isUiOpen
+    MainFrame.Visible = isUiOpen
+    
+    if isUiOpen then
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(76, 153, 0)
+    else
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
